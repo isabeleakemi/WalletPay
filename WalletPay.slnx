@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="WalletPay.Api/WalletPay.Api.csproj" Id="3ee78814-cdbf-49e8-81d9-7b821ae9a2ee" />
+  <Project Path="WalletPay.Application/WalletPay.Application.csproj" />
+  <Project Path="WalletPay.Domain/WalletPay.Domain.csproj" />
+  <Project Path="WalletPay.Infrastructure/WalletPay.Infrastructure.csproj" Id="876bb448-eba8-4fb1-83b3-6acb5818cc6c" />
+</Solution>
