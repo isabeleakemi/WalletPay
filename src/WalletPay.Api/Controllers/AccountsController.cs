@@ -10,13 +10,16 @@ namespace WalletPay.Api.Controllers
     {
         private readonly CreateAccountUseCase _createAccountUseCase;
         private readonly GetAccountUseCase _getAccountUseCase;
+        private readonly DepositUseCase _depositUseCase;
 
         public AccountsController(
             CreateAccountUseCase createAccountUseCase,
-            GetAccountUseCase getAccountUseCase)
+            GetAccountUseCase getAccountUseCase,
+            DepositUseCase depositUseCase)
         {
             _createAccountUseCase = createAccountUseCase;
             _getAccountUseCase = getAccountUseCase;
+            _depositUseCase = depositUseCase;
         }
 
         [HttpPost]
@@ -41,6 +44,23 @@ namespace WalletPay.Api.Controllers
         {
             var account = await _getAccountUseCase.ExecuteAsync(
                 id,
+                cancellationToken);
+
+            if (account is null)
+                return NotFound();
+
+            return Ok(account);
+        }
+
+        [HttpPost("{id:guid}/deposit")]
+        public async Task<ActionResult<AccountResponse>> Deposit(
+            Guid id,
+            DepositRequest request,
+            CancellationToken cancellationToken)
+        {
+            var account = await _depositUseCase.ExecuteAsync(
+                id,
+                request,
                 cancellationToken);
 
             if (account is null)

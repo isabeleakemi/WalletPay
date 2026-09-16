@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using WalletPay.Domain.Exceptions;
 
 namespace WalletPay.Domain.Entities
 {
@@ -25,6 +21,28 @@ namespace WalletPay.Domain.Entities
             Document = document;
             Balance = 0;
             CreatedAt = DateTime.UtcNow;
+        }
+
+        public void Credit(decimal amount)
+        {
+            if (amount <= 0)
+                throw new DomainException(
+                    "Credit amount must be greater than zero.");
+
+            Balance += amount;
+        }
+
+        public void Debit(decimal amount)
+        {
+            if (amount <= 0)
+                throw new DomainException(
+                    "Debit amount must be greater than zero.");
+
+            if (Balance < amount)
+                throw new DomainException(
+                    "Insufficient balance.");
+
+            Balance -= amount;
         }
     }
 }

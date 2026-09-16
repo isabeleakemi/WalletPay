@@ -1,5 +1,6 @@
 using WalletPay.Application.Interfaces;
 using WalletPay.Application.UseCases.Accounts;
+using WalletPay.Application.UseCases.Transactions;
 using WalletPay.Infrastructure.Persistence.MongoDb;
 using WalletPay.Infrastructure.Repositories;
 
@@ -19,6 +20,8 @@ var mongoSettings = builder.Configuration
     ?? throw new InvalidOperationException(
         "MongoDB configuration was not found.");
 
+MongoDbConfiguration.Configure();
+
 builder.Services.AddSingleton(mongoSettings);
 builder.Services.AddSingleton<MongoDbContext>();
 
@@ -29,6 +32,8 @@ builder.Services.AddScoped<ITransactionRepository, MongoTransactionRepository>()
 // Use Cases
 builder.Services.AddScoped<CreateAccountUseCase>();
 builder.Services.AddScoped<GetAccountUseCase>();
+builder.Services.AddScoped<CreateTransferUseCase>();
+builder.Services.AddScoped<DepositUseCase>();
 
 var app = builder.Build();
 

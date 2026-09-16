@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using WalletPay.Domain.Enums;
+using WalletPay.Domain.Exceptions;
 
 namespace WalletPay.Domain.Entities
 {
@@ -32,6 +33,22 @@ namespace WalletPay.Domain.Entities
             Guid destinationAccountId,
             decimal amount)
         {
+            if (sourceAccountId == Guid.Empty)
+                throw new DomainException(
+                    "Source account is required.");
+
+            if (destinationAccountId == Guid.Empty)
+                throw new DomainException(
+                    "Destination account is required.");
+
+            if (sourceAccountId == destinationAccountId)
+                throw new DomainException(
+                    "Source and destination accounts must be different.");
+
+            if (amount <= 0)
+                throw new DomainException(
+                    "Transfer amount must be greater than zero.");
+
             Id = Guid.NewGuid();
             SourceAccountId = sourceAccountId;
             DestinationAccountId = destinationAccountId;
