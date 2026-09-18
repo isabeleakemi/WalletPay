@@ -33,6 +33,7 @@ builder.Services.AddScoped<ITransactionRepository, MongoTransactionRepository>()
 builder.Services.AddScoped<CreateAccountUseCase>();
 builder.Services.AddScoped<GetAccountUseCase>();
 builder.Services.AddScoped<CreateTransferUseCase>();
+builder.Services.AddScoped<GetTransferUseCase>();
 builder.Services.AddScoped<DepositUseCase>();
 
 var app = builder.Build();

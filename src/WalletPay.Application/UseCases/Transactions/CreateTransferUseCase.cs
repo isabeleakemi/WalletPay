@@ -1,5 +1,6 @@
 ﻿using WalletPay.Application.DTOs;
 using WalletPay.Application.Interfaces;
+using WalletPay.Application.Messaging;
 using WalletPay.Domain.Entities;
 
 namespace WalletPay.Application.UseCases.Transactions
@@ -8,13 +9,16 @@ namespace WalletPay.Application.UseCases.Transactions
     {
         private readonly IAccountRepository _accountRepository;
         private readonly ITransactionRepository _transactionRepository;
+        private readonly IMessagePublisher _messagePublisher;
 
         public CreateTransferUseCase(
             IAccountRepository accountRepository,
-            ITransactionRepository transactionRepository)
+            ITransactionRepository transactionRepository,
+            IMessagePublisher messagePublisher)
         {
             _accountRepository = accountRepository;
             _transactionRepository = transactionRepository;
+            _messagePublisher = messagePublisher;
         }
 
         public async Task<TransactionResponse> ExecuteAsync(
@@ -48,6 +52,17 @@ namespace WalletPay.Application.UseCases.Transactions
 
             await _transactionRepository.AddAsync(
                 transaction,
+                cancellationToken);
+
+            var message = new TransferCreatedMessage(
+            transaction.Id,
+            transaction.SourceAccountId,
+            transaction.DestinationAccountId,
+            transaction.Amount);
+
+            await _messagePublisher.PublishAsync(
+                message,
+                "transfer-created",
                 cancellationToken);
 
             return new TransactionResponse(

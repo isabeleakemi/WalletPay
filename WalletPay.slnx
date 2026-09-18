@@ -3,4 +3,5 @@
   <Project Path="src/WalletPay.Application/WalletPay.Application.csproj" />
   <Project Path="src/WalletPay.Domain/WalletPay.Domain.csproj" />
   <Project Path="src/WalletPay.Infrastructure/WalletPay.Infrastructure.csproj" Id="876bb448-eba8-4fb1-83b3-6acb5818cc6c" />
+  <Project Path="src/WalletPay.Worker/WalletPay.Worker.csproj" Id="324493d2-a940-426c-b53a-4da2c7fd982c" />
 </Solution>

@@ -9,11 +9,14 @@ namespace WalletPay.Api.Controllers
     public class TransfersController : ControllerBase
     {
         private readonly CreateTransferUseCase _createTransferUseCase;
+        private readonly GetTransferUseCase _getTransferUseCase;
 
         public TransfersController(
-            CreateTransferUseCase createTransferUseCase)
+            CreateTransferUseCase createTransferUseCase, 
+            GetTransferUseCase getTransferUseCase)
         {
             _createTransferUseCase = createTransferUseCase;
+            _getTransferUseCase = getTransferUseCase;
         }
 
         [HttpPost]
@@ -36,8 +39,14 @@ namespace WalletPay.Api.Controllers
             Guid id,
             CancellationToken cancellationToken)
         {
-            // Vamos implementar no próximo passo.
-            return Ok();
+            var transaction = await _getTransferUseCase.ExecuteAsync(
+            id,
+            cancellationToken);
+
+            if (transaction is null)
+                return NotFound();
+
+            return Ok(transaction);
         }
     }
 }
