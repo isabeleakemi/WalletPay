@@ -56,5 +56,34 @@ namespace WalletPay.Domain.Entities
             Status = TransactionStatus.Pending;
             CreatedAt = DateTime.UtcNow;
         }
+
+        public void StartProcessing()
+        {
+            if (Status != TransactionStatus.Pending)
+                throw new DomainException(
+                    "Transaction must be pending to start processing.");
+
+            Status = TransactionStatus.Processing;
+        }
+
+        public void Complete()
+        {
+            if (Status != TransactionStatus.Processing)
+                throw new DomainException(
+                    "Transaction must be processing to complete.");
+
+            Status = TransactionStatus.Completed;
+            ProcessedAt = DateTime.UtcNow;
+        }
+
+        public void Fail()
+        {
+            if (Status != TransactionStatus.Processing)
+                throw new DomainException(
+                    "Transaction must be processing to fail.");
+
+            Status = TransactionStatus.Failed;
+            ProcessedAt = DateTime.UtcNow;
+        }
     }
 }
