@@ -1,7 +1,9 @@
+using StackExchange.Redis;
 using WalletPay.Application.Interfaces;
 using WalletPay.Application.UseCases.Transactions;
 using WalletPay.Infrastructure.Messaging.RabbitMQ;
 using WalletPay.Infrastructure.Persistence.MongoDb;
+using WalletPay.Infrastructure.Persistence.Redis;
 using WalletPay.Infrastructure.Repositories;
 using WalletPay.Worker;
 
@@ -30,6 +32,22 @@ var rabbitMqSettings = builder.Configuration
 builder.Services.AddSingleton(rabbitMqSettings);
 
 builder.Services.AddSingleton<RabbitMqTransferConsumer>();
+
+var redisSettings = builder.Configuration
+    .GetSection("Redis")
+    .Get<RedisSettings>()
+    ?? throw new InvalidOperationException(
+        "Redis configuration was not found.");
+
+builder.Services.AddSingleton(redisSettings);
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    ConnectionMultiplexer.Connect(
+        redisSettings.ConnectionString));
+
+builder.Services.AddSingleton<
+    IIdempotencyService,
+    RedisIdempotencyService>();
 
 builder.Services.AddScoped<ProcessTransferUseCase>();
 

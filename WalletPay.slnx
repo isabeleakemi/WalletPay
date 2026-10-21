@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="src/WalletPay.Api/WalletPay.Api.csproj" Id="3ee78814-cdbf-49e8-81d9-7b821ae9a2ee" />
   <Project Path="src/WalletPay.Application/WalletPay.Application.csproj" />
+  <Project Path="src/WalletPay.Domain.Tests/WalletPay.Domain.Tests.csproj" Id="a385db71-d381-40d3-ad9e-3bc7212c2e30" />
   <Project Path="src/WalletPay.Domain/WalletPay.Domain.csproj" />
   <Project Path="src/WalletPay.Infrastructure/WalletPay.Infrastructure.csproj" Id="876bb448-eba8-4fb1-83b3-6acb5818cc6c" />
   <Project Path="src/WalletPay.Worker/WalletPay.Worker.csproj" Id="324493d2-a940-426c-b53a-4da2c7fd982c" />
