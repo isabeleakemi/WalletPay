@@ -20,5 +20,9 @@ namespace WalletPay.Application.Interfaces
         Task UpdateAsync(
             Transaction transaction,
             CancellationToken cancellationToken = default);
+
+        Task<bool> TryStartProcessingAsync(
+            Guid id,
+            CancellationToken cancellationToken = default);
     }
 }

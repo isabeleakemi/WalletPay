@@ -41,5 +41,29 @@ namespace WalletPay.Infrastructure.Repositories
                 transaction,
                 cancellationToken: cancellationToken);
         }
+
+        public async Task<bool> TryStartProcessingAsync(
+            Guid id,
+            CancellationToken cancellationToken = default)
+        {
+            var filter = Builders<Transaction>.Filter.And(
+                Builders<Transaction>.Filter.Eq(
+                    transaction => transaction.Id,
+                    id),
+                Builders<Transaction>.Filter.Eq(
+                    transaction => transaction.Status,
+                    WalletPay.Domain.Enums.TransactionStatus.Pending));
+
+            var update = Builders<Transaction>.Update.Set(
+                transaction => transaction.Status,
+                WalletPay.Domain.Enums.TransactionStatus.Processing);
+
+            var result = await _context.Transactions.UpdateOneAsync(
+                filter,
+                update,
+                cancellationToken: cancellationToken);
+
+            return result.ModifiedCount == 1;
+        }
     }
 }

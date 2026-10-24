@@ -47,6 +47,17 @@ namespace WalletPay.Application.UseCases.Transactions
             if (transaction.Status != TransactionStatus.Pending)
                 return;
 
+            var started = await _transactionRepository.TryStartProcessingAsync(
+                transaction.Id,
+                cancellationToken);
+
+            if (!started)
+                return;
+
+            // Atualiza também a entidade em memória.
+            // O status já foi alterado atomicamente no MongoDB.
+            transaction.StartProcessing();
+
             var sourceAccount = await _accountRepository.GetByIdAsync(
                 transaction.SourceAccountId,
                 cancellationToken);
@@ -57,7 +68,6 @@ namespace WalletPay.Application.UseCases.Transactions
 
             if (sourceAccount is null || destinationAccount is null)
             {
-                transaction.StartProcessing();
                 transaction.Fail();
 
                 await _transactionRepository.UpdateAsync(
@@ -67,11 +77,11 @@ namespace WalletPay.Application.UseCases.Transactions
                 return;
             }
 
-            transaction.StartProcessing();
+            //transaction.StartProcessing();
 
-            await _transactionRepository.UpdateAsync(
-                transaction,
-                cancellationToken);
+            //await _transactionRepository.UpdateAsync(
+            //    transaction,
+            //    cancellationToken);
 
             try
             {
