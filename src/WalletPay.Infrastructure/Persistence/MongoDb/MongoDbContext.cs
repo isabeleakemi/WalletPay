@@ -7,11 +7,14 @@ namespace WalletPay.Infrastructure.Persistence.MongoDb
     {
         private readonly IMongoDatabase _database;
 
+        public IMongoClient Client { get; }
+
         public MongoDbContext(MongoDbSettings settings)
         {
-            var client = new MongoClient(settings.ConnectionString);
+            MongoDbConfiguration.Configure();
 
-            _database = client.GetDatabase(settings.DatabaseName);
+            Client = new MongoClient(settings.ConnectionString);
+            _database = Client.GetDatabase(settings.DatabaseName);
         }
 
         public IMongoCollection<Account> Accounts =>

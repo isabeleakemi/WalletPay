@@ -10,23 +10,25 @@ namespace WalletPay.Application.UseCases.Transactions
         private readonly IAccountRepository _accountRepository;
         private readonly ITransactionRepository _transactionRepository;
         private readonly IIdempotencyService _idempotencyService;
+        private readonly ITransferUnitOfWork _unitOfWork;
 
         public ProcessTransferUseCase(
             IAccountRepository accountRepository,
             ITransactionRepository transactionRepository,
-            IIdempotencyService idempotencyService)
+            IIdempotencyService idempotencyService,
+            ITransferUnitOfWork unitOfWork)
         {
             _accountRepository = accountRepository;
             _transactionRepository = transactionRepository;
             _idempotencyService = idempotencyService;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task ExecuteAsync(
             TransferCreatedMessage message,
             CancellationToken cancellationToken = default)
         {
-            var idempotencyKey =
-                $"transfer:{message.TransactionId}";
+            var idempotencyKey = $"transfer:{message.TransactionId}";
 
             var alreadyProcessed =
                 await _idempotencyService.HasBeenProcessedAsync(
@@ -36,83 +38,96 @@ namespace WalletPay.Application.UseCases.Transactions
             if (alreadyProcessed)
                 return;
 
-            var transaction = await _transactionRepository.GetByIdAsync(
-                message.TransactionId,
+            await _unitOfWork.ExecuteAsync(
+                async transactionCancellationToken =>
+                {
+                    var transaction =
+                        await _transactionRepository.GetByIdAsync(
+                            message.TransactionId,
+                            transactionCancellationToken);
+
+                    if (transaction is null ||
+                        transaction.Status != TransactionStatus.Pending)
+                    {
+                        return;
+                    }
+
+                    var started =
+                        await _transactionRepository.TryStartProcessingAsync(
+                            transaction.Id,
+                            transactionCancellationToken);
+
+                    if (!started)
+                        return;
+
+                    transaction.StartProcessing();
+
+                    var sourceAccount =
+                        await _accountRepository.GetByIdAsync(
+                            transaction.SourceAccountId,
+                            transactionCancellationToken);
+
+                    var destinationAccount =
+                        await _accountRepository.GetByIdAsync(
+                            transaction.DestinationAccountId,
+                            transactionCancellationToken);
+
+                    if (sourceAccount is null ||
+                        destinationAccount is null)
+                    {
+                        transaction.Fail();
+
+                        await _transactionRepository.UpdateAsync(
+                            transaction,
+                            transactionCancellationToken);
+
+                        return;
+                    }
+
+                    try
+                    {
+                        sourceAccount.Debit(transaction.Amount);
+                        destinationAccount.Credit(transaction.Amount);
+                    }
+                    catch (DomainException)
+                    {
+                        transaction.Fail();
+
+                        await _transactionRepository.UpdateAsync(
+                            transaction,
+                            transactionCancellationToken);
+
+                        return;
+                    }
+
+                    await _accountRepository.UpdateAsync(
+                        sourceAccount,
+                        transactionCancellationToken);
+
+                    await _accountRepository.UpdateAsync(
+                        destinationAccount,
+                        transactionCancellationToken);
+
+                    transaction.Complete();
+
+                    await _transactionRepository.UpdateAsync(
+                        transaction,
+                        transactionCancellationToken);
+                },
                 cancellationToken);
 
-            if (transaction is null)
-                return;
+            // Só marca no Redis depois que a transação MongoDB terminou.
+            // A leitura também permite confirmar o resultado persistido.
+            var finalTransaction =
+                await _transactionRepository.GetByIdAsync(
+                    message.TransactionId,
+                    cancellationToken);
 
-            // Evita processar novamente uma transação já finalizada.
-            if (transaction.Status != TransactionStatus.Pending)
-                return;
-
-            var started = await _transactionRepository.TryStartProcessingAsync(
-                transaction.Id,
-                cancellationToken);
-
-            if (!started)
-                return;
-
-            // Atualiza também a entidade em memória.
-            // O status já foi alterado atomicamente no MongoDB.
-            transaction.StartProcessing();
-
-            var sourceAccount = await _accountRepository.GetByIdAsync(
-                transaction.SourceAccountId,
-                cancellationToken);
-
-            var destinationAccount = await _accountRepository.GetByIdAsync(
-                transaction.DestinationAccountId,
-                cancellationToken);
-
-            if (sourceAccount is null || destinationAccount is null)
+            if (finalTransaction?.Status == TransactionStatus.Completed)
             {
-                transaction.Fail();
-
-                await _transactionRepository.UpdateAsync(
-                    transaction,
-                    cancellationToken);
-
-                return;
-            }
-
-            //transaction.StartProcessing();
-
-            //await _transactionRepository.UpdateAsync(
-            //    transaction,
-            //    cancellationToken);
-
-            try
-            {
-                sourceAccount.Debit(transaction.Amount);
-                destinationAccount.Credit(transaction.Amount);
-
-                await _accountRepository.UpdateAsync(
-                    sourceAccount,
-                    cancellationToken);
-
-                await _accountRepository.UpdateAsync(
-                    destinationAccount,
-                    cancellationToken);
-
-                transaction.Complete();
-
-                await _transactionRepository.UpdateAsync(
-                    transaction,
-                    cancellationToken);
-
                 await _idempotencyService.MarkAsProcessedAsync(
                     idempotencyKey,
                     TimeSpan.FromHours(24),
-                    cancellationToken);
-            }
-            catch (DomainException)
-            {
-                transaction.Fail();
-
-                await _transactionRepository.UpdateAsync(
-                    transaction,
                     cancellationToken);
             }
         }

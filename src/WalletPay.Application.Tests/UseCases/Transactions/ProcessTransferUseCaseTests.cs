@@ -12,13 +12,24 @@ namespace WalletPay.Application.Tests.UseCases.Transactions
         private readonly Mock<IAccountRepository> _accountRepository = new();
         private readonly Mock<ITransactionRepository> _transactionRepository = new();
         private readonly Mock<IIdempotencyService> _idempotencyService = new();
+        private readonly Mock<ITransferUnitOfWork> _unitOfWork = new();
 
         private ProcessTransferUseCase CreateUseCase()
         {
+            _unitOfWork
+                .Setup(x => x.ExecuteAsync(
+                    It.IsAny<Func<CancellationToken, Task>>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns((
+                    Func<CancellationToken, Task> operation,
+                    CancellationToken cancellationToken) =>
+                        operation(cancellationToken));
+
             return new ProcessTransferUseCase(
                 _accountRepository.Object,
                 _transactionRepository.Object,
-                _idempotencyService.Object);
+                _idempotencyService.Object,
+                _unitOfWork.Object);
         }
 
         private static TransferCreatedMessage CreateMessage(Guid transactionId)

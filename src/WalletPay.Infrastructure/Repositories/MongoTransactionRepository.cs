@@ -1,6 +1,7 @@
 ﻿using MongoDB.Driver;
 using WalletPay.Application.Interfaces;
 using WalletPay.Domain.Entities;
+using WalletPay.Domain.Enums;
 using WalletPay.Infrastructure.Persistence.MongoDb;
 
 namespace WalletPay.Infrastructure.Repositories
@@ -8,16 +9,29 @@ namespace WalletPay.Infrastructure.Repositories
     public class MongoTransactionRepository : ITransactionRepository
     {
         private readonly MongoDbContext _context;
+        private readonly MongoSessionContext _sessionContext;
 
-        public MongoTransactionRepository(MongoDbContext context)
+        public MongoTransactionRepository(
+            MongoDbContext context,
+            MongoSessionContext sessionContext)
         {
             _context = context;
+            _sessionContext = sessionContext;
         }
 
         public async Task<Transaction?> GetByIdAsync(
             Guid id,
             CancellationToken cancellationToken = default)
         {
+            var session = _sessionContext.Session;
+
+            if (session is not null)
+            {
+                return await _context.Transactions
+                    .Find(session, transaction => transaction.Id == id)
+                    .FirstOrDefaultAsync(cancellationToken);
+            }
+
             return await _context.Transactions
                 .Find(transaction => transaction.Id == id)
                 .FirstOrDefaultAsync(cancellationToken);
@@ -27,6 +41,17 @@ namespace WalletPay.Infrastructure.Repositories
             Transaction transaction,
             CancellationToken cancellationToken = default)
         {
+            var session = _sessionContext.Session;
+
+            if (session is not null)
+            {
+                await _context.Transactions.InsertOneAsync(
+                    session,
+                    transaction,
+                    cancellationToken: cancellationToken);
+                return;
+            }
+
             await _context.Transactions.InsertOneAsync(
                 transaction,
                 cancellationToken: cancellationToken);
@@ -36,6 +61,18 @@ namespace WalletPay.Infrastructure.Repositories
             Transaction transaction,
             CancellationToken cancellationToken = default)
         {
+            var session = _sessionContext.Session;
+
+            if (session is not null)
+            {
+                await _context.Transactions.ReplaceOneAsync(
+                    session,
+                    x => x.Id == transaction.Id,
+                    transaction,
+                    cancellationToken: cancellationToken);
+                return;
+            }
+
             await _context.Transactions.ReplaceOneAsync(
                 x => x.Id == transaction.Id,
                 transaction,
@@ -52,16 +89,30 @@ namespace WalletPay.Infrastructure.Repositories
                     id),
                 Builders<Transaction>.Filter.Eq(
                     transaction => transaction.Status,
-                    WalletPay.Domain.Enums.TransactionStatus.Pending));
+                    TransactionStatus.Pending));
 
             var update = Builders<Transaction>.Update.Set(
                 transaction => transaction.Status,
-                WalletPay.Domain.Enums.TransactionStatus.Processing);
+                TransactionStatus.Processing);
 
-            var result = await _context.Transactions.UpdateOneAsync(
-                filter,
-                update,
-                cancellationToken: cancellationToken);
+            var session = _sessionContext.Session;
+            UpdateResult result;
+
+            if (session is not null)
+            {
+                result = await _context.Transactions.UpdateOneAsync(
+                    session,
+                    filter,
+                    update,
+                    cancellationToken: cancellationToken);
+            }
+            else
+            {
+                result = await _context.Transactions.UpdateOneAsync(
+                    filter,
+                    update,
+                    cancellationToken: cancellationToken);
+            }
 
             return result.ModifiedCount == 1;
         }

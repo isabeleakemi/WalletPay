@@ -23,6 +23,9 @@ builder.Services.AddSingleton<MongoDbContext>();
 builder.Services.AddScoped<IAccountRepository, MongoAccountRepository>();
 builder.Services.AddScoped<ITransactionRepository, MongoTransactionRepository>();
 
+builder.Services.AddScoped<MongoSessionContext>();
+builder.Services.AddScoped<ITransferUnitOfWork, MongoTransferUnitOfWork>();
+
 var rabbitMqSettings = builder.Configuration
     .GetSection("RabbitMq")
     .Get<RabbitMqSettings>()
